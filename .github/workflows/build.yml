@@ -164,12 +164,17 @@ jobs:
     # Signing is optional for CI builds. Without the private keystore secret, produce an
     # unsigned APK artifact instead of failing before Gradle starts.
     - name: Decode Keystore
-      if: ${{ secrets.APP_KEYSTORE_BASE64 != '' }}
-      uses: timheuer/base64-to-file@v2.0.0
       id: android_keystore
-      with:
-        fileName: "android_keystore.jks"
-        encodedString: ${{ secrets.APP_KEYSTORE_BASE64 }}
+      env:
+        APP_KEYSTORE_BASE64: ${{ secrets.APP_KEYSTORE_BASE64 }}
+      run: |
+        if [[ -n "$APP_KEYSTORE_BASE64" ]]; then
+          KEYSTORE_PATH="$RUNNER_TEMP/android_keystore.jks"
+          printf '%s' "$APP_KEYSTORE_BASE64" | base64 --decode > "$KEYSTORE_PATH"
+          echo "filePath=$KEYSTORE_PATH" >> "$GITHUB_OUTPUT"
+        else
+          echo "::notice::No keystore secret configured; the APK will be built unsigned."
+        fi
 
     - name: Build APK
       env:
