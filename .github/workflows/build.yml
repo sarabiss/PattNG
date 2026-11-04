@@ -9,6 +9,7 @@ on:
   push:
     branches:
       - master
+      - fix/android-tv-connect-dpad
 
 permissions:
   contents: write
