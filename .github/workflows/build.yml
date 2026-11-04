@@ -173,6 +173,7 @@ jobs:
 
     - name: Build APK
       env:
+        APP_KEYSTORE_BASE64: ${{ secrets.APP_KEYSTORE_BASE64 }}
         APP_KEYSTORE_PASSWORD: ${{ secrets.APP_KEYSTORE_PASSWORD }}
         APP_KEYSTORE_ALIAS: ${{ secrets.APP_KEYSTORE_ALIAS }}
         APP_KEY_PASSWORD: ${{ secrets.APP_KEY_PASSWORD }}
@@ -183,7 +184,7 @@ jobs:
         ./gradlew :app:testPlaystoreDebugUnitTest
         ./gradlew licenseFdroidReleaseReport
 
-        if [[ -n "${{ secrets.APP_KEYSTORE_BASE64 }}" ]]; then
+        if [[ -n "$APP_KEYSTORE_BASE64" ]]; then
           ./gradlew assembleRelease -PpattngVersion="${{ inputs.release_tag }}" \
             -Pandroid.injected.signing.store.file="${{ steps.android_keystore.outputs.filePath }}" \
             -Pandroid.injected.signing.store.password="$APP_KEYSTORE_PASSWORD" \
