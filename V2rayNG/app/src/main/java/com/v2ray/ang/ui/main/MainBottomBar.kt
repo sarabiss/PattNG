@@ -3,6 +3,7 @@ package com.v2ray.ang.ui.main
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,18 +18,28 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -50,6 +61,25 @@ fun MainBottomBar(
 ) {
     val scope = rememberCoroutineScope()
     val rotationAnim = remember { Animatable(0f) }
+    val connectFocusRequester = remember { FocusRequester() }
+    var isConnectFocused by remember { mutableStateOf(false) }
+
+    val onConnectClick: () -> Unit = {
+        if (!isRunning) {
+            scope.launch {
+                rotationAnim.animateTo(
+                    targetValue = 720f,
+                    animationSpec = tween(durationMillis = 3000)
+                )
+            }
+        }
+        onAction(MainAction.ToggleService)
+    }
+
+    // Put the initial focus on Connect so a TV remote can activate it immediately.
+    LaunchedEffect(connectFocusRequester) {
+        connectFocusRequester.requestFocus()
+    }
 
     LaunchedEffect(isRunning) {
         if (!isRunning) {
@@ -84,22 +114,34 @@ fun MainBottomBar(
             }
         }
         FloatingActionButton(
-            onClick = {
-                if (!isRunning) {
-                    scope.launch {
-                        rotationAnim.animateTo(
-                            targetValue = 720f,
-                            animationSpec = tween(durationMillis = 3000)
-                        )
-                    }
-                }
-                onAction(MainAction.ToggleService)
-            },
+            onClick = onConnectClick,
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(end = 24.dp)
                 .offset(y = (-28).dp)
-                .navigationBarsPadding(),
+                .navigationBarsPadding()
+                .focusRequester(connectFocusRequester)
+                .onFocusChanged { isConnectFocused = it.isFocused }
+                // Consume DPAD_CENTER here so it triggers the same action exactly once.
+                .onPreviewKeyEvent { event ->
+                    if (event.key == Key.DirectionCenter) {
+                        if (event.type == KeyEventType.KeyUp) onConnectClick()
+                        true
+                    } else {
+                        false
+                    }
+                }
+                .then(
+                    if (isConnectFocused) {
+                        Modifier.border(
+                            width = 3.dp,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            shape = CircleShape
+                        )
+                    } else {
+                        Modifier
+                    }
+                ),
             containerColor = if (isRunning) colorFabActive
             else if (isDarkTheme) colorFabInactiveDark
             else colorFabInactiveLight
